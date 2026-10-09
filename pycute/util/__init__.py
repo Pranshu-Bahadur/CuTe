@@ -4,6 +4,7 @@
 from pycute import *
 
 from .draw_colors import *
+from .draw_labels import *
 from .draw_svg import *
 from .draw_latex import *
 from .print_table import *

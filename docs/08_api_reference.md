@@ -21,9 +21,10 @@ The reference is organized by module:
 * [`tensor`](#module-tensor) — `Tensor`, `is_tensor`, `identity_tensor`, `make_tensor`
 * [`util.print_tensor`](#module-utilprint_tensor) — `print_tensor`
 * [`util.print_table`](#module-utilprint_table) — `print_table`
-* [`util.draw_svg`](#module-utildraw_svg) — `draw_svg`, `draw_svg_tv`
-* [`util.draw_latex`](#module-utildraw_latex) — `draw_latex`, `draw_latex_tv`
+* [`util.draw_svg`](#module-utildraw_svg) — `draw_svg`, `draw_svg_inv`, `draw_svg_tv`
+* [`util.draw_latex`](#module-utildraw_latex) — `draw_latex`, `draw_latex_inv`, `draw_latex_tv`
 * [`util.draw_colors`](#module-utildraw_colors) — `index_grey_8x`, `bank_color_8x`, `bank_color_16x`, `bank_color_32x`, `thread_color_8x`, `value_color_8x`, `warp_color_8x`, `constant`, `white`
+* [`util.draw_labels`](#module-utildraw_labels) — `tv_label`, `index_label`
 
 Each entry's *Pre-conditions* and *Post-conditions* are the formal contract
 its unit test asserts, and every *Examples* block is evaluated by
@@ -2589,17 +2590,22 @@ Requires the optional `tabulate` package (`pip install pycute[viz]`).
 ## Module: `util.draw_svg`
 
 Source: [`pycute/util/draw_svg.py`](../pycute/util/draw_svg.py)
+Tests: [`test_draw.py`](../test/test_draw.py)
 
 Utilities for SVG generation of CuTe Layouts
 
-### `draw_svg(tensor, filename='layout.svg', color=white)`
+### `draw_svg(tensor, filename='layout.svg', color=white, cell_width=20, cell_label=str, axis_label=index_label)`
 
-Save a rank-2 `Tensor` or `Layout` as an SVG table with row/column labels.
+Visualize crd -> val over a grid of coordinates, crd, labelled with cell_label(val).
 
-A `Layout` labels each cell with its offset, a `Tensor` with the element
+Saves a rank-2 `Tensor` or `Layout` as an SVG table with row/column labels:
+a `Layout` labels each cell with its offset, a `Tensor` with the element
 stored there. A rank-1 input is drawn as a single row. `color` is a functor
 `color(idx) -> (r, g, b)` keyed on the cell's offset; `draw_colors` holds a
-catalog of them.
+catalog of them. `cell_width` widens the cells, in pixels, for labels longer
+than a few characters, such as coordinates. `cell_label(val) -> str` writes
+a cell's value, and `axis_label(axis, i) -> str` names row `i` (axis `0`) or
+column `i` (axis `1`); `draw_labels` holds the defaults.
 
 Requires the optional `svgwrite` package (`pip install pycute[viz]`).
 
@@ -2609,24 +2615,39 @@ Requires the optional `svgwrite` package (`pip install pycute[viz]`).
 rank(tensor) is 1 or 2; otherwise a ValueError is raised
 ```
 
-### `draw_svg_tv(layout, tile_mn=None, filename='tvlayout.svg', color=thread_color_8x)`
+### `draw_svg_inv(layout, tile_mn=None, filename='invlayout.svg', color=white, cell_label=str, axis_label=index_label)`
 
-Save a rank-2 thread-value layout as a colored SVG table with `T`/`V` labels.
+Visualize val -> crd over a grid of coordinates, crd, labelled with cell_label(val).
 
-The layout maps `(tid, vid)` to a position in the tile. Its codomain may be
-2-D `(m, n)` coordinates, or a linear offset -- in which case a rank-2
-`tile_mn` is required and the offsets are folded into the tile via
-`composition(tile_mn, layout)`. `color` is a functor
-`color(tid, vid) -> (r, g, b)`; where several `(tid, vid)` pairs land on one
-cell, the first drawn wins.
+The inverse view of `draw_svg`: `composition(tile_mn, layout)` sends each
+index `val` of the layout's domain to a coordinate `(m, n)` of the tile
+`tile_mn`, folding a linear offset into the tile and leaving a coordinate as
+it is, and `color(val) -> (r, g, b)` and `cell_label(val) -> str` color and
+label that cell. `tile_mn` defaults to `coshape(layout)`. Where several
+values land on one cell the least is drawn, and a cell none lands on is left
+white. `axis_label` is as in `draw_svg`.
 
 Requires the optional `svgwrite` package (`pip install pycute[viz]`).
 
 *Pre-conditions:*
 
 ```
-rank(layout) == 2 and rank(tile_mn) == 2
-the codomain is 2-D once folded; otherwise a ValueError is raised
+tile_mn is a rank-2 shape; otherwise a ValueError is raised
+```
+
+### `draw_svg_tv(layout, tile_mn=None, filename='tvlayout.svg', color=thread_color_8x, cell_label=tv_label, axis_label=index_label)`
+
+Visualize a thread-value layout, (tid, vid) -> crd, labelled with cell_label(tid, vid).
+
+`draw_svg_inv`, with each index of the domain taken apart into its thread
+`tid` and value `vid`: `color(tid, vid) -> (r, g, b)` colors a cell, by
+thread by default, and `cell_label(tid, vid) -> str` labels it, `T{tid}`
+over `V{vid}` by default. The other arguments are as in `draw_svg_inv`.
+
+*Pre-conditions:*
+
+```
+rank(layout) == 2; otherwise a ValueError is raised
 ```
 
 ---
@@ -2634,17 +2655,20 @@ the codomain is 2-D once folded; otherwise a ValueError is raised
 ## Module: `util.draw_latex`
 
 Source: [`pycute/util/draw_latex.py`](../pycute/util/draw_latex.py)
+Tests: [`test_draw.py`](../test/test_draw.py)
 
 Utilities for LaTeX/PDF generation of CuTe Layouts
 
-### `draw_latex(tensor, filename='layout.tex', compile_pdf=True, color=white)`
+### `draw_latex(tensor, filename='layout.tex', compile_pdf=True, color=white, cell_label=str, axis_label=index_label)`
 
-The LaTeX/PDF analogue of `draw_svg`, mirroring `cute:print_latex`.
+Visualize crd -> val over a grid of coordinates, crd, labelled with cell_label(val).
 
-Writes a standalone TikZ document for a rank-2 `Tensor` or `Layout` (rank-1
-becomes a single row) and, by default, compiles it to a cropped PDF with
-`pdflatex`. A missing or failing `pdflatex` leaves the `.tex` in place rather
-than raising. `color` has the same contract as in `draw_svg`.
+The LaTeX/PDF analogue of `draw_svg`, mirroring `cute:print_latex`. Writes a
+standalone TikZ document for a rank-2 `Tensor` or `Layout` (rank-1 becomes a
+single row) and, by default, compiles it to a cropped PDF with `pdflatex`. A
+missing or failing `pdflatex` leaves the `.tex` in place rather than
+raising. `color`, `cell_label` and `axis_label` have the same contracts as
+in `draw_svg`.
 
 *Pre-conditions:*
 
@@ -2652,20 +2676,31 @@ than raising. `color` has the same contract as in `draw_svg`.
 rank(tensor) is 1 or 2; otherwise a ValueError is raised
 ```
 
-### `draw_latex_tv(layout, tile_mn=None, filename='tvlayout.tex', compile_pdf=True, color=thread_color_8x)`
+### `draw_latex_inv(layout, tile_mn=None, filename='invlayout.tex', compile_pdf=True, color=white, cell_label=str, axis_label=index_label)`
 
-The LaTeX/PDF analogue of `draw_svg_tv`.
+Visualize val -> crd over a grid of coordinates, crd, labelled with cell_label(val).
 
-Takes the same thread-value layouts -- a 2-D `(m, n)` codomain, or a linear
-offset folded through a rank-2 `tile_mn` -- and renders them as TikZ with
-`T`/`V` annotations, compiling to PDF by default. `color` has the same
-contract as in `draw_svg_tv`.
+The LaTeX/PDF analogue of `draw_svg_inv`: the same layouts, tile, functors
+and errors, rendered as TikZ and compiled to PDF by default.
 
 *Pre-conditions:*
 
 ```
-rank(layout) == 2 and rank(tile_mn) == 2
-the codomain is 2-D once folded; otherwise a ValueError is raised
+tile_mn is a rank-2 shape; otherwise a ValueError is raised
+```
+
+### `draw_latex_tv(layout, tile_mn=None, filename='tvlayout.tex', compile_pdf=True, color=thread_color_8x, cell_label=tv_label, axis_label=index_label)`
+
+Visualize a thread-value layout, (tid, vid) -> crd, labelled with cell_label(tid, vid).
+
+The LaTeX/PDF analogue of `draw_svg_tv`: `draw_latex_inv`, with each index of
+the domain taken apart into its thread `tid` and value `vid` for `color` and
+`cell_label`.
+
+*Pre-conditions:*
+
+```
+rank(layout) == 2; otherwise a ValueError is raised
 ```
 
 ---
@@ -2737,6 +2772,39 @@ Constant white `(255, 255, 255)`; valid for either functor signature.
 
 ---
 
+## Module: `util.draw_labels`
+
+Source: [`pycute/util/draw_labels.py`](../pycute/util/draw_labels.py)
+
+Labelling functors shared by the CuTe Layout visualizers (draw_svg / draw_latex)
+
+A `cell_label` functor gives the text of a cell, and an `axis_label` functor the
+text of a row or column index in the margins. Each drawer takes both:
+
+* `cell_label(val) -> str` for `draw_svg` / `draw_latex`, keyed on the
+  cell's value -- the element of a `Tensor`, the offset of a `Layout` -- and
+  for `draw_svg_inv` / `draw_latex_inv`, keyed on the index of the layout's
+  domain sent to the cell; defaulting to `str`
+* `cell_label(tid, vid) -> str` for `draw_svg_tv` / `draw_latex_tv`, keyed
+  on the `(tid, vid)` pair that lands on the cell and defaulting to
+  `tv_label`
+* `axis_label(axis, i) -> str` for every drawer, naming row `i` when `axis`
+  is `0` and column `i` when it is `1`, and defaulting to `index_label`
+
+A label with several lines, separated by `\n`, is drawn one line under the
+other, and an empty label writes nothing: its cell is left blank, or its row or
+column unlabelled.
+
+### `tv_label(tid, vid)`
+
+`T{tid}` over `V{vid}`: the default cell label of the thread-value drawers.
+
+### `index_label(axis, i)`
+
+Row or column `i` by its index: the default axis label of every drawer.
+
+---
+
 ## Tests
 
 Each test module states what it covers in its own docstring; this
@@ -2755,6 +2823,7 @@ table is generated from those.
 | [`test_composition.py`](../test/test_composition.py) | Unit tests for pycute.composition |
 | [`test_docs_exports.py`](../test/test_docs_exports.py) | Ensure the docs keep describing pycute's public API accurately. |
 | [`test_docstring_examples.py`](../test/test_docstring_examples.py) | Evaluate every example in every pycute docstring. |
+| [`test_draw.py`](../test/test_draw.py) | Unit tests for pycute.util.draw_svg and pycute.util.draw_latex |
 | [`test_greatest_common_domain.py`](../test/test_greatest_common_domain.py) | Unit tests for pycute.greatest_common_domain |
 | [`test_htuple.py`](../test/test_htuple.py) | Unit tests for pycute.htuple, and for pycute.stride's leaf arithmetic |
 | [`test_inverse_left.py`](../test/test_inverse_left.py) | Unit tests for pycute.left_inverse |

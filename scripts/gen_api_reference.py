@@ -57,7 +57,7 @@ MODULE_ORDER = (
   "htuple", "typedefs", "stride", "shape", "atuple", "layout", "algebra",
   "swizzle", "accessor", "tensor",
   "util.print_tensor", "util.print_table", "util.draw_svg", "util.draw_latex",
-  "util.draw_colors",
+  "util.draw_colors", "util.draw_labels",
 )
 
 # `pycute.util` is imported separately: it is optional (the drawers need

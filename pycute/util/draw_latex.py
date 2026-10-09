@@ -10,6 +10,7 @@ from typing import Union
 from pycute import *
 
 from .draw_colors import thread_color_8x, white
+from .draw_labels import index_label, tv_label
 
 
 _latex_header = (
@@ -31,13 +32,19 @@ def _tikz_rgb(rgb):
   return f"{{rgb,255:red,{r};green,{g};blue,{b}}}"
 
 
-def _grid_and_labels(M, N):
-  s = f"\n\\draw[color=black,thick,shift={{(-0.5,-0.5)}}] (0,0) grid ({M},{N});\n\n"
-  for m in range(M):
-    s += f"\\node at ({m},{-1}) {{\\Large{{\\texttt{{{m}}}}}}};\n"
-  for n in range(N):
-    s += f"\\node at ({-1},{n}) {{\\Large{{\\texttt{{{n}}}}}}};\n"
-  return s
+def _draw_label(text, x, y, font_size="", font_family="", fill=None):
+  # A node at `(x, y)` writing `text`, its lines stacked one under the other,
+  # on the cell's `fill` if it has one; a node with neither is left out.
+  lines = str(text).split("\n")
+  text = lines[0] if len(lines) == 1 else "\\shortstack{" + " \\\\ ".join(lines) + "}"
+  if not text and fill is None:
+    return ""
+  if font_family:
+    text = f"{font_family}{{{text}}}"
+  if font_size:
+    text = f"{font_size}{{{text}}}"
+  options = "" if fill is None else f"[fill={_tikz_rgb(fill)}]"
+  return f"\\node{options} at ({x},{y}) {{{text}}};\n"
 
 
 def _write_and_compile(body, filename, compile_pdf):
@@ -77,14 +84,17 @@ def _write_and_compile(body, filename, compile_pdf):
   print(f"Saved as {stem}.pdf")
 
 
-def draw_latex(tensor : Union[Tensor, LayoutBase], filename="layout.tex", compile_pdf=True, color=white):
+def draw_latex(tensor : Union[Tensor, LayoutBase], filename="layout.tex", compile_pdf=True, color=white,
+               cell_label=str, axis_label=index_label):
   """
-  The LaTeX/PDF analogue of `draw_svg`, mirroring `cute::print_latex`.
+  Visualize crd -> val over a grid of coordinates, crd, labelled with cell_label(val).
 
-  Writes a standalone TikZ document for a rank-2 `Tensor` or `Layout` (rank-1
-  becomes a single row) and, by default, compiles it to a cropped PDF with
-  `pdflatex`. A missing or failing `pdflatex` leaves the `.tex` in place rather
-  than raising. `color` has the same contract as in `draw_svg`.
+  The LaTeX/PDF analogue of `draw_svg`, mirroring `cute::print_latex`. Writes a
+  standalone TikZ document for a rank-2 `Tensor` or `Layout` (rank-1 becomes a
+  single row) and, by default, compiles it to a cropped PDF with `pdflatex`. A
+  missing or failing `pdflatex` leaves the `.tex` in place rather than
+  raising. `color`, `cell_label` and `axis_label` have the same contracts as
+  in `draw_svg`.
 
   Pre-conditions:
     rank(tensor) is 1 or 2; otherwise a ValueError is raised
@@ -104,49 +114,72 @@ def draw_latex(tensor : Union[Tensor, LayoutBase], filename="layout.tex", compil
       # Label by the value, color by the offset
       value  = tensor[i, j]
       offset = tensor.layout(i, j)
-      body += (f"\\node[fill={_tikz_rgb(color(offset))}] at ({i},{j}) {{{value}}};\n")
-  body += _grid_and_labels(M, N)
+      body += _draw_label(cell_label(value), i, j, fill=color(offset))
+  body += f"\n\\draw[color=black,thick,shift={{(-0.5,-0.5)}}] (0,0) grid ({M},{N});\n\n"
+
+  # Row indices down the left margin, column indices across the top
+  for i in range(M):
+    body += _draw_label(axis_label(0, i), i, -1, "\\Large", "\\texttt")
+  for j in range(N):
+    body += _draw_label(axis_label(1, j), -1, j, "\\Large", "\\texttt")
 
   _write_and_compile(body, filename, compile_pdf)
 
 
-def draw_latex_tv(layout : LayoutBase, tile_mn=None, filename="tvlayout.tex", compile_pdf=True, color=thread_color_8x):
+def draw_latex_inv(layout : LayoutBase, tile_mn=None, filename="invlayout.tex", compile_pdf=True, color=white,
+                   cell_label=str, axis_label=index_label):
   """
-  The LaTeX/PDF analogue of `draw_svg_tv`.
+  Visualize val -> crd over a grid of coordinates, crd, labelled with cell_label(val).
 
-  Takes the same thread-value layouts -- a 2-D `(m, n)` codomain, or a linear
-  offset folded through a rank-2 `tile_mn` -- and renders them as TikZ with
-  `T`/`V` annotations, compiling to PDF by default. `color` has the same
-  contract as in `draw_svg_tv`.
+  The LaTeX/PDF analogue of `draw_svg_inv`: the same layouts, tile, functors
+  and errors, rendered as TikZ and compiled to PDF by default.
 
   Pre-conditions:
-    rank(layout) == 2 and rank(tile_mn) == 2
-    the codomain is 2-D once folded; otherwise a ValueError is raised
+    tile_mn is a rank-2 shape; otherwise a ValueError is raised
+  """
+  tile_mn = coshape(layout) if tile_mn is None else tile_mn
+  if not congruent(tile_mn, (0,0)):
+    raise ValueError(f"Expected a rank-2 MN Tile")
+  layout = composition(tile_mn, layout)
+
+  M, N = tile_mn
+  filled = [[False for n in range(N)] for m in range(M)]
+
+  # Zero-extended, since a coordinate on mode 0 alone is sparse: `5@0` is (5, 0)
+  body = f"% Layout: {layout}\n"
+  for val in range(size(layout)):
+    i, j = ArithTuple(0, 0) + layout(val)
+    if filled[i][j]:
+      continue
+    filled[i][j] = True
+    body += _draw_label(cell_label(val), i, j, fill=color(val))
+  body += f"\n\\draw[color=black,thick,shift={{(-0.5,-0.5)}}] (0,0) grid ({M},{N});\n\n"
+
+  # Row indices down the left margin, column indices across the top
+  for i in range(M):
+    body += _draw_label(axis_label(0, i), i, -1, "\\Large", "\\texttt")
+  for j in range(N):
+    body += _draw_label(axis_label(1, j), -1, j, "\\Large", "\\texttt")
+
+  _write_and_compile(body, filename, compile_pdf)
+
+
+def draw_latex_tv(layout : LayoutBase, tile_mn=None, filename="tvlayout.tex", compile_pdf=True, color=thread_color_8x,
+                  cell_label=tv_label, axis_label=index_label):
+  """
+  Visualize a thread-value layout, (tid, vid) -> crd, labelled with cell_label(tid, vid).
+
+  The LaTeX/PDF analogue of `draw_svg_tv`: `draw_latex_inv`, with each index of
+  the domain taken apart into its thread `tid` and value `vid` for `color` and
+  `cell_label`.
+
+  Pre-conditions:
+    rank(layout) == 2; otherwise a ValueError is raised
   """
   if rank(layout) != 2:
     raise ValueError(f"Expected a rank-2 TV Layout")
 
-  tile_mn = coshape(layout) if tile_mn is None else tile_mn
-  if rank(tile_mn) != 2:
-    raise ValueError(f"Expected a rank-2 MN Tile")
-
-  if congruent(coprofile(layout), 0):
-    layout = composition(tile_mn, layout)
-  if not congruent(coprofile(layout), (0,0)):
-    raise ValueError(f"Expected a 2D codomain (tid,vid) -> (m,n)")
-
-  M, N = size[0](tile_mn), size[1](tile_mn)
-  filled = [[False for n in range(N)] for m in range(M)]
-
-  body = f"% Layout TV: {layout}\n"
-  for tid in range(size[0](layout)):
-    for vid in range(size[1](layout)):
-      i, j = layout(tid, vid)
-      if filled[i][j]:
-        continue
-      filled[i][j] = True
-      body += (f"\\node[fill={_tikz_rgb(color(tid, vid))}] "
-               f"at ({i},{j}) {{\\shortstack{{T{tid} \\\\ V{vid}}}}};\n")
-  body += _grid_and_labels(M, N)
-
-  _write_and_compile(body, filename, compile_pdf)
+  S = product_each(shape(layout))
+  return draw_latex_inv(layout, tile_mn, filename, compile_pdf,
+                        lambda val: color(*idx2crd(val, S)),
+                        lambda val: cell_label(*idx2crd(val, S)), axis_label)
