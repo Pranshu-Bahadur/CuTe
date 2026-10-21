@@ -77,9 +77,9 @@ def congruent(a: Profile, b: Profile) -> bool:
     congruent((4, 8), (E(0), E(1)))           == True     # a coordinate stride
     congruent((4, 8), (F2(1), F2(8)))         == True     # an F2 stride
   """
-  if is_tuple(a) and is_tuple(b):
-    return len(a) == len(b) and all(congruent(i,j) for i,j in zip(a,b))
-  return not (is_tuple(a) or is_tuple(b))
+  if is_tuple(a):
+    return is_tuple(b) and len(a) == len(b) and all(map(congruent, a, b))
+  return not is_tuple(b)
 
 
 def weakly_congruent(a: Profile, b: Profile) -> bool:
@@ -104,9 +104,9 @@ def weakly_congruent(a: Profile, b: Profile) -> bool:
     weakly_congruent(E(0), 8)                 == True     # a stride scalar leaf
     weakly_congruent(E(0, 0), (8, 8))         == True     # ... coarsens a shape too
   """
-  if is_tuple(a) and is_tuple(b):
-    return len(a) == len(b) and all(weakly_congruent(i,j) for i,j in zip(a,b))
-  return not is_tuple(a)
+  if is_tuple(a):
+    return is_tuple(b) and len(a) == len(b) and all(map(weakly_congruent, a, b))
+  return True
 
 
 def wrap(x: HTuple) -> HTuple:
@@ -338,7 +338,9 @@ def leaves(htuple: HTuple) -> Iterator:
     tuple(leaves(()))           == ()
   """
   if is_tuple(htuple):
-    for x in htuple: yield from leaves(x)
+    for x in htuple:
+      if is_tuple(x): yield from leaves(x)
+      else:           yield x
   else:
     yield htuple
 
@@ -360,7 +362,9 @@ def zip_leaves(htuple: HTuple, *tuples: HTuple) -> Iterator[tuple]:
     list(zip_leaves(1, (2, 3)))                 == [(1, (2, 3))]
   """
   if is_tuple(htuple):
-    for x in zip_longest(htuple, *tuples): yield from zip_leaves(*x)
+    for x in zip_longest(htuple, *tuples):
+      if is_tuple(x[0]): yield from zip_leaves(*x)
+      else:              yield x
   else:
     yield (htuple, *tuples)
 
@@ -415,7 +419,7 @@ def unflatten(values: Iterator, profile: Profile, make=tuple) -> HTuple:
     unflatten(iter([2, 3]), (0, 0), list)    == [2, 3]
   """
   if is_tuple(profile):
-    return make(unflatten(values,p,make) for p in profile)
+    return make(unflatten(values,p,make) if is_tuple(p) else next(values) for p in profile)
   return next(values)
 
 

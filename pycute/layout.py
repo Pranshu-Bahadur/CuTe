@@ -390,7 +390,7 @@ class Layout(LayoutBase):
     def _stride_key(ds):
       return (0, ds[0]) if is_static(ds[0]) else (1, 0)
 
-    for de, s in sorted(zip(leaves(self.stride), leaves(self.shape)), key=_stride_key):
+    for de, s in sorted(zip_leaves(self.stride, self.shape), key=_stride_key):
       d = proj(de, de)
       result_s = proj(result_S, de)
       result_d = proj(result_D, de)

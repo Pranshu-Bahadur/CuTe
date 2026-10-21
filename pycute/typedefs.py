@@ -80,7 +80,7 @@ def register_integer_type(*types: type) -> None:
 
 def is_int(x) -> bool:
   """True iff `x` is an instance of an `Integer`-registered type."""
-  return isinstance(x, Integer)
+  return type(x) is int or isinstance(x, Integer)   # int first: the ABC check is far slower
 
 
 def is_static(x) -> bool:
@@ -220,7 +220,7 @@ StrideScalar.register(Integer)
 
 def is_stride_scalar(value) -> bool:
   """True iff `value` is an instance of a `StrideScalar` type."""
-  return isinstance(value, StrideScalar)
+  return type(value) is int or isinstance(value, StrideScalar)   # int first: the ABC check is far slower
 
 
 # ---------------------------------------------------------------------------
