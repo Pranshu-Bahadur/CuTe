@@ -177,8 +177,10 @@ op[0](A, B)          <==>  op(A, B, mode=(0,))   # any number of arguments
 op[0](A, B, mode=1)  <==>  op(A, B, mode=(0,1))
 ```
 
-`mode` is keyword-only, so a mode is never mistaken for an argument of `op`.
-A negative index counts from the end of the mode it indexes, as for a tuple.
+`mode` is keyword-only, so a mode is never mistaken for an argument of `op`,
+and defaults to `()`, so an empty path is left to that default. A mode is a
+Python `int`, or a tuple or list of them, and a negative index counts from the
+end of the mode it indexes, as for a tuple.
 
 *Examples:*
 

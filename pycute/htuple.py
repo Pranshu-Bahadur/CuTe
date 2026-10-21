@@ -153,8 +153,10 @@ def ModeOpDecorator(func):
     op[0](A, B)          <==>  op(A, B, mode=(0,))   # any number of arguments
     op[0](A, B, mode=1)  <==>  op(A, B, mode=(0,1))
 
-  `mode` is keyword-only, so a mode is never mistaken for an argument of `op`.
-  A negative index counts from the end of the mode it indexes, as for a tuple.
+  `mode` is keyword-only, so a mode is never mistaken for an argument of `op`,
+  and defaults to `()`, so an empty path is left to that default. A mode is a
+  Python `int`, or a tuple or list of them, and a negative index counts from the
+  end of the mode it indexes, as for a tuple.
 
   Examples:
     shape[1](Layout((3, (2, 4))))      == shape(Layout((3, (2, 4))), mode=(1,))
@@ -171,14 +173,20 @@ def ModeOpDecorator(func):
 
     def __call__(self, *args, mode=(), **kwargs):
       """Apply the function, prepending the subscripted modes to its `mode`."""
-      # A list path is a path too, though a list is not an HTuple
-      path = tuple(mode) if isinstance(mode, list) else wrap(mode)
-      return self.func(*args, mode=self.mode + path, **kwargs)
+      if not isinstance(mode, tuple):      # A list path is a path too, though a list is not an HTuple
+        mode = tuple(mode) if isinstance(mode, list) else (mode,)
+      mode = self.mode + mode
+      if not mode:                         # An empty path is left to func's own `mode=()` default
+        return self.func(*args, **kwargs)
+      return self.func(*args, mode=mode, **kwargs)
 
     def __getitem__(self, mode):
       """Return a new instance with new modes appended to existing modes."""
-      path = tuple(mode) if isinstance(mode, list) else wrap(mode)
-      return ModeOp(self.func, self.mode + path)
+      if not isinstance(mode, tuple):
+        mode = tuple(mode) if isinstance(mode, list) else (mode,)
+      op = object.__new__(ModeOp)          # Copy rather than rewrap, keeping func's name, docstring and signature
+      op.__dict__ = {**self.__dict__, 'mode': self.mode + mode}
+      return op
 
   return ModeOp(func)
 
@@ -311,7 +319,8 @@ def transform_apply_leaf(make, fn, htuple: HTuple, *tuples: HTuple) -> HTuple:
     transform_apply_leaf(make_layout, Layout, (2, 3), (1, 4))  == Layout((2, 3), (1, 4))
   """
   if isinstance(htuple, tuple):
-    return make(transform_apply_leaf(make, fn, *items) for items in zip_longest(htuple, *tuples))
+    return make(transform_apply_leaf(make, fn, *items) if isinstance(items[0], tuple) else fn(*items)
+                for items in zip_longest(htuple, *tuples))
   return fn(htuple, *tuples)
 
 

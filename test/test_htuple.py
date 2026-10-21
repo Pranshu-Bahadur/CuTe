@@ -7,6 +7,8 @@ Unit tests for pycute.htuple, and for pycute.stride's leaf arithmetic
 These tests are also worked examples for docs/01_htuple.md.
 """
 
+import inspect
+
 import pytest
 
 from pycute import *
@@ -362,6 +364,14 @@ class TestModeOpDecorator:
     assert op[3](1, 2) == (1, 2, (3,), None)
     assert op[3, 4](1, 2, c=5) == (1, 2, (3, 4), 5)
     assert op[3](1, 2, mode=4, c=5) == (1, 2, (3, 4), 5)
+
+  def test_a_subscripted_op_presents_its_function(self):
+    """A subscripted op presents the name, docstring and signature of its function."""
+    for op in (shape[0], shape[0][1], shape[[0, 1]], shape[()]):
+      assert op.__name__ == "shape"
+      assert op.__doc__ == shape.__doc__
+      assert inspect.signature(op) == inspect.signature(shape)
+      assert op.func is shape.func
 
   def test_mode_indexed_shape(self):
     A = Layout(((2, 3), 4), ((4, 8), 1))
