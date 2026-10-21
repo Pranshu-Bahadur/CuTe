@@ -226,6 +226,8 @@ class Layout(LayoutBase):
 
     A = self._coalesce_z(coprofile(B))
 
+    if not isinstance(A.shape, tuple):  # Special case rank-1 A, s:d o N:M => N:d*M, by mode
+      return Layout._set(B.shape, transform_leaf(lambda m: 0 if static_true(m == 0) else A.stride * m, B.stride))
     if isinstance(B.shape, tuple):  # RHS distributive, A o (X,Y,...) => (A o X, A o Y, ...)
       return make_layout(A._composition(b) for b in B)
     if static_true(B.stride == 0):  # Special case stride-0, A o N:0 => N:0
