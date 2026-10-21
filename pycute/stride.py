@@ -170,20 +170,32 @@ def _coalesce_z(shape: Shape, stride: Stride) -> tuple[Shape, Stride]:
 
   Pre-conditions:
     congruent(shape, stride)
+
+  Post-conditions:
+    len(result[0]) >= 1
   """
-  result_s = []                                           # Accumulated shapes
-  result_d = []                                           # Accumulated strides
-  for s_b, d_b in zip(leaves(shape), leaves(stride)):
-    while result_s and static_true(result_s[-1] == 1):    # Drop trailing size-1 modes
-      result_s.pop()
-      result_d.pop()
-    if result_s:
-      s_a, d_a = result_s[-1], result_d[-1]
-      if (static_true(s_a * d_a == d_b)                   # Linearity at (0, 1)
-          and static_true((s_a - 1) * d_a + d_b == (2 * s_a - 1) * d_a)
-          and static_true((s_ab := s_a * s_b) == s_a * s_b)):  # Reject an opaque product
-        result_s[-1] = s_ab                               # Merge mergeable modes
+  if not isinstance(shape, tuple):                        # Single mode shortcut
+    return (shape,), (stride,)
+  pairs = zip_leaves(shape, stride)
+  for s_a, d_a in pairs:                                  # The first leaf starts the last mode
+    break
+  else:                                                   # No leaves at all coalesce to 1:0
+    return (1,), (0,)
+  result_s, result_d = [], []                             # Accumulated modes, but the last
+  for s_b, d_b in pairs:
+    if static_true(s_a == 1):                             # Drop a trailing size-1 mode
+      if not result_s:
+        s_a, d_a = s_b, d_b
         continue
-    result_s.append(s_b)                                  # Else, Append
-    result_d.append(d_b)
+      s_a, d_a = result_s.pop(), result_d.pop()
+    if (static_true(s_a * d_a == d_b) and                 # Linearity at (0, 1)
+        static_true((s_a - 1) * d_a + d_b == (2 * s_a - 1) * d_a) and
+        static_true((s_ab := s_a * s_b) == s_a * s_b)):   # Reject an opaque product
+      s_a = s_ab                                          # Merge mergeable modes
+      continue
+    result_s.append(s_a)                                  # Else, Append
+    result_d.append(d_a)
+    s_a, d_a = s_b, d_b
+  result_s.append(s_a)
+  result_d.append(d_a)
   return tuple(result_s), tuple(result_d)

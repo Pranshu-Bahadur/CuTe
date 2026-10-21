@@ -187,8 +187,6 @@ class Layout(LayoutBase):
       return make_layout(a._coalesce_z(p) for a,p in zip_longest(self,profile))
 
     new_s, new_d = _coalesce_z(self.shape, self.stride)
-    if new_s == ():
-      return Layout._set(1, 0)
     return Layout._set(unwrap(new_s), unwrap(new_d))
 
   def _coalesce(self, profile=1) -> Layout:
@@ -202,8 +200,6 @@ class Layout(LayoutBase):
       return make_layout(a._coalesce(p) for a,p in zip_longest(self,profile))
 
     new_s, new_d = _coalesce_z(self.shape, self.stride)
-    if new_s == ():
-      return Layout._set(1, 0)
     if len(new_s) > 1 and static_true(new_s[-1] == 1):
       return Layout._set(unwrap(new_s[:-1]), unwrap(new_d[:-1]))
     return Layout._set(unwrap(new_s), unwrap(new_d))

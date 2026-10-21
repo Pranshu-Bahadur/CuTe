@@ -48,6 +48,8 @@ class TestMakeLayout:
     assert rank(make_layout([]))  == 0
     assert size(make_layout([]))  == 1
     assert coalesce(make_layout([])) == Layout(1, 0)  # the algebra normalizes it
+    assert coalesce_z(make_layout([])) == Layout(1, 0)
+    assert composition(make_layout([]), Layout(4, 1)) == Layout(4, 0)
 
     A = Layout((3, 4), (4, 1))
     assert make_layout([A, make_layout([])]) == Layout(((3, 4), ()), ((4, 1), ()))
