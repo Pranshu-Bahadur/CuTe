@@ -130,16 +130,16 @@ class ArithTuple(StrideScalar):
   def __new__(cls, *args):
     """
     Public, fully-validating constructor: accepts stride scalars, ArithTuples,
-    tuples/lists, or varargs.
+    tuples, or varargs.
 
-    Nested raw tuples and lists are recursively lifted to `ArithTuple`
-    children; a single scalar or single ArithTuple passes through unchanged.
+    Nested raw tuples are recursively lifted to `ArithTuple` children; a single
+    scalar or single ArithTuple passes through unchanged.
     """
     if len(args) == 1:
       arg = args[0]
       if is_stride_scalar(arg):        # includes ArithTuple, int, Integer, F2
         return arg
-      if not is_tuple(arg):
+      if not isinstance(arg, tuple):
         raise TypeError(f"ArithTuple({arg!r})")
       seq = arg
     else:
@@ -150,7 +150,7 @@ class ArithTuple(StrideScalar):
     for x in seq:
       if is_stride_scalar(x):          # Any stride scalar may be a leaf, not just int
         data.append(x)
-      elif is_tuple(x):
+      elif isinstance(x, tuple):
         data.append(cls(x))
       else:
         raise TypeError(f"ArithTuple: bad leaf {x!r}")
@@ -168,7 +168,7 @@ class ArithTuple(StrideScalar):
   # ------------------------------------------------------------------
 
   def __add__(self, other):
-    if not (is_stride_scalar(other) or is_tuple(other)):
+    if not (is_stride_scalar(other) or isinstance(other, tuple)):
       return NotImplemented
     other = ArithTuple(other)          # lift / passthrough
     if not isinstance(other, ArithTuple):
@@ -181,7 +181,7 @@ class ArithTuple(StrideScalar):
     return self.__add__(other)         # commutative
 
   def __sub__(self, other):
-    if not (is_stride_scalar(other) or is_tuple(other)):
+    if not (is_stride_scalar(other) or isinstance(other, tuple)):
       return NotImplemented
     other = ArithTuple(other)          # lift / passthrough
     if not isinstance(other, ArithTuple):
@@ -237,7 +237,7 @@ class ArithTuple(StrideScalar):
   def __eq__(self, other):
     if isinstance(other, ArithTuple) or is_int(other):
       return _atuple_eq(self, other)
-    if is_tuple(other):
+    if isinstance(other, tuple):
       return _atuple_eq(self, ArithTuple(other))
     return NotImplemented
 
@@ -269,7 +269,7 @@ class ArithTuple(StrideScalar):
     Pad `self.data` with zeros up to `len(shape)` and dispatch back to the
     regular `idx2crd`. Returns a plain Python tuple.
     """
-    if not is_tuple(shape):
+    if not isinstance(shape, tuple):
       raise ValueError(f"_idx2crd({self}, {shape}): rank mismatch")
     if len(shape) < len(self.data):
       raise ValueError(f"_idx2crd({self}, {shape}): rank exceeds shape")
@@ -445,7 +445,7 @@ def make_basis_like(profile, mode=()):
     make_basis_like(10)               == E()
     congruent(make_basis_like((10, (20, 30))), (10, (20, 30))) == True
   """
-  if is_tuple(profile):
+  if isinstance(profile, tuple):
     return tuple(make_basis_like(s, mode + (i,))
                  for i, s in enumerate(profile))
   return E(*mode)
@@ -502,12 +502,12 @@ def unit(basis):
 
 def as_tuple(atuple):
   """
-  Materialize an `ArithTuple`, or a tuple/list of them, as a plain nested tuple.
+  Materialize an `ArithTuple`, or a tuple of them, as a plain nested tuple.
 
   Examples:
     as_tuple(ArithTuple(1, 2, (3, 4)))  == (1, 2, (3, 4))
     as_tuple(42)                        == 42
   """
-  if isinstance(atuple, ArithTuple) or is_tuple(atuple):
+  if isinstance(atuple, ArithTuple) or isinstance(atuple, tuple):
     return tuple(as_tuple(v) for v in atuple)
   return atuple

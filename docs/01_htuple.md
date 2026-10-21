@@ -31,14 +31,14 @@ In Python, an `HTuple(int)` is just a Python integer or a Python tuple of
 >>> ((4, 6), (3, (2, 2), 8))
 ```
 
-For purposes of `is_tuple`, both `tuple` and `list` count as tuples:
+For purposes of `is_tuple`, only a `tuple` is a tuple:
 
 ```python
 >>> from pycute import *
 >>> is_tuple((1, 2, 3))
 True
 >>> is_tuple([1, 2, 3])
-True
+False
 >>> is_tuple(7)
 False
 ```
@@ -50,12 +50,12 @@ type alias `HTuple` plus a `Profile` synonym for the
 "only the structure matters" case:
 
 ```python
-HTuple  = Union[Any, tuple["HTuple", ...], list["HTuple"]]   # a leaf, or a tuple/list of HTuples
+HTuple  = Union[Any, tuple["HTuple", ...]]                   # a leaf, or a tuple of HTuples
 Profile = HTuple                                             # an HTuple used only for its structure
 ```
 
 These are *hints*, not runtime checks — the carriers are still plain
-`int`/`tuple`/`list`, and the structural contracts are enforced at runtime by
+`int`/`tuple`, and the structural contracts are enforced at runtime by
 `congruent` / `weakly_congruent` (below). These definitions and the integer-leaf specializations
 `IntTuple`, `Shape`, and `Coord`, and the stride specialization `Stride` live in
 [`typedefs.py`](../pycute/typedefs.py). All are re-exported from the

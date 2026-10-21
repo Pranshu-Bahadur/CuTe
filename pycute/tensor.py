@@ -153,7 +153,7 @@ def make_tensor(layout: Layout | Shape, dtype=ctypes.c_double) -> Tensor:
     make_tensor(Layout((2, 2), (E(0), E(1))))   -> ValueError
   """
   if not is_layout(layout):
-    if not is_tuple(layout) and not is_int(layout):
+    if not isinstance(layout, tuple) and not is_int(layout):
       raise ValueError(f"make_tensor({dtype}, {layout}): Invalid layout {layout}")
     layout = Layout(layout)
   N = coshape(layout)

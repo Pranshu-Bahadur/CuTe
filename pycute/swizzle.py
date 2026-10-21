@@ -197,7 +197,7 @@ class F2(StrideScalar):
       idx2crd(F2(0b10110), (3, 3))    == (F2(0b1), F2(0b1101))   # only 3 is a divisor
       idx2crd(F2(0b10110), (3, 3, 3)) -> ValueError    # F2(3) * F2(3) == F2(5) != 9
     """
-    if not is_tuple(shape):              # Identity, nothing to decompose
+    if not isinstance(shape, tuple):     # Identity, nothing to decompose
       return self
     def divmod_seq(idx):
       pps = 1                            # Running colex prefix product, in Z

@@ -182,7 +182,7 @@ class Layout(LayoutBase):
     """
     if profile is None:
       return self
-    if is_tuple(profile):
+    if isinstance(profile, tuple):
       if rank(self) < len(profile): raise ValueError(f"Rank mismatch: coalesce_z({self}, {profile})")
       return make_layout(a._coalesce_z(p) for a,p in zip_longest(self,profile))
 
@@ -197,7 +197,7 @@ class Layout(LayoutBase):
     """
     if profile is None:
       return self
-    if is_tuple(profile):
+    if isinstance(profile, tuple):
       if rank(self) < len(profile): raise ValueError(f"Rank mismatch: coalesce({self}, {profile})")
       return make_layout(a._coalesce(p) for a,p in zip_longest(self,profile))
 
@@ -212,11 +212,11 @@ class Layout(LayoutBase):
     """
     Compose this Layout with `B`.
     """
-    if B is None:           # RHS None, noop
+    if B is None:            # RHS None, noop
       return self
-    if is_int(B):           # RHS int, A o N -> A o N:1
+    if is_int(B):            # RHS int, A o N -> A o N:1
       B = Layout._set(B, 1)
-    if is_tuple(B):         # RHS tuple, (A0,A1,...) o <X,Y,...> => (A0 o X, A1 o Y, ...)
+    if isinstance(B, tuple): # RHS tuple, (A0,A1,...) o <X,Y,...> => (A0 o X, A1 o Y, ...)
       if rank(self) < len(B): raise ValueError(f"Rank mismatch: composition({self}, {B})")
       return make_layout(a._composition(b) for a,b in zip(self,B))
 
@@ -226,7 +226,7 @@ class Layout(LayoutBase):
 
     A = self._coalesce_z(coprofile(B))
 
-    if is_tuple(B.shape):   # RHS distributive, A o (X,Y,...) => (A o X, A o Y, ...)
+    if isinstance(B.shape, tuple):  # RHS distributive, A o (X,Y,...) => (A o X, A o Y, ...)
       return make_layout(A._composition(b) for b in B)
     if static_true(B.stride == 0):  # Special case stride-0, A o N:0 => N:0
       return Layout._set(B.shape, 0)
@@ -273,7 +273,7 @@ class Layout(LayoutBase):
           raise ValueError(f"Shape divisibility condition violated: composition({self}, {B})")
 
       # Accumulate into resultL
-      resultL = layout_add(resultL, Layout._set(result_s, result_d))
+      resultL = layout_add(resultL, Layout._set(tuple(result_s), tuple(result_d)))
 
     return resultL._coalesce()
 
@@ -321,7 +321,7 @@ class Layout(LayoutBase):
 
         stride = pps * one                  # This chain stride's domain index,
         if not static_true(residue == 0):   # corrected for the part already covered
-          stride += inner_product(idx2crd(residue, result_s), result_d)
+          stride += inner_product(idx2crd(residue, tuple(result_s)), tuple(result_d))
 
         result_s.append(s)
         result_d.append(stride)
@@ -369,7 +369,8 @@ class Layout(LayoutBase):
       result_s.append(s)                    # Record this mode (a later mode overwrites s with its own gap)
       result_d.append(pps)
 
-    result = Layout._set(tuple(result_S), tuple(result_D))._coalesce_z(coprof)
+    result = Layout._set(transform_leaf(lambda _, s: tuple(s), coprof, result_S),
+                         transform_leaf(lambda _, d: tuple(d), coprof, result_D))._coalesce_z(coprof)
     # A gap between strides becomes an extent, so a codomain whose stride
     # quotients are not Integers cannot be chained this way. F2's quotient is a
     # carry-less one, which lands an F2 in the shape.
@@ -419,6 +420,7 @@ class Layout(LayoutBase):
         for i, s in enumerate(shapeR):
           shapeR[i] = (s + sizeC - 1) // sizeC
           sizeC     = (s + sizeC - 1) // s
+        shapeR = tuple(shapeR)
         shapeC = wrap(shapeC)[:-1] + (shapeR,)
         return Layout(shapeC, strideC)._coalesce()
       # Extend the result
@@ -567,7 +569,7 @@ def make_ordered_layout(_shape: Shape, _order: IntTuple) -> Layout:
 # ---------------------------------------------------------------------------
 
 #: An HTuple(Integer | Layout): the by-mode tiler argument to the algebra.
-Tiler: TypeAlias = Union[Integer, "Layout", tuple["Tiler", ...], list["Tiler"]]
+Tiler: TypeAlias = Union[Integer, "Layout", tuple["Tiler", ...]]
 
 
 def tiler_to_layout(tiler: Tiler, e: StrideScalar = 1) -> Layout:
@@ -588,7 +590,7 @@ def tiler_to_layout(tiler: Tiler, e: StrideScalar = 1) -> Layout:
   """
   if is_int(tiler):
     return Layout._set(tiler, e)
-  if is_tuple(tiler):
+  if isinstance(tiler, tuple):
     return transform_apply_leaf(make_layout, tiler_to_layout, tiler, make_basis_like(tiler))
   if is_layout(tiler):
     return Layout._set(tiler.shape, transform_leaf(lambda d: e * d, tiler.stride))

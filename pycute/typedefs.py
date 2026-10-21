@@ -229,7 +229,7 @@ def is_stride_scalar(value) -> bool:
 # Documentation-grade aliases spelled in the 3.10-compatible form (`TypeAlias`
 # + string forward-refs, not the PEP 695 `type` statement which is 3.12+).
 # They are *hints*, not runtime checks: the carriers are plain
-# `int`/`tuple`/`list`, and the structural contracts (congruence,
+# `int`/`tuple`, and the structural contracts (congruence,
 # positivity, ...) are enforced at runtime by `congruent` /
 # `weakly_congruent` / `compatible` and the `is_*` predicates.
 #
@@ -241,21 +241,21 @@ def is_stride_scalar(value) -> bool:
 # ---------------------------------------------------------------------------
 
 #: An HTuple with unconstrained leaves; used for generic, profile-shaped args.
-HTuple: TypeAlias = Union[Any, tuple["HTuple", ...], list["HTuple"]]
+HTuple: TypeAlias = Union[Any, tuple["HTuple", ...]]
 
 #: A congruence *profile*: an HTuple whose leaf values are irrelevant -- only its
 #: tuple/leaf tree structure matters (see `congruent`).
 Profile: TypeAlias = HTuple
 
 #: An HTuple(Integer): the shared carrier of shapes and coordinates.
-IntTuple: TypeAlias = Union[Integer, tuple["IntTuple", ...], list["IntTuple"]]
+IntTuple: TypeAlias = Union[Integer, tuple["IntTuple", ...]]
 
 #: A shape: an HTuple of (positive) integers describing per-mode extents (Z+).
 Shape: TypeAlias = IntTuple
 
 #: A coordinate into a shape: an HTuple of integers -- natural / integral /
 #: flat / admissible -- optionally carrying `None` slice-markers at any level.
-Coord: TypeAlias = Union[Integer, None, tuple["Coord", ...], list["Coord"]]
+Coord: TypeAlias = Union[Integer, None, tuple["Coord", ...]]
 
 #: An HTuple(StrideScalar): the stride half of a Layout, congruent with its Shape.
-Stride: TypeAlias = Union[StrideScalar, tuple["Stride", ...], list["Stride"]]
+Stride: TypeAlias = Union[StrideScalar, tuple["Stride", ...]]

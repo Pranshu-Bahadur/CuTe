@@ -64,7 +64,7 @@ def prefix_product(a: Shape, init: Stride = 1) -> Stride:
 
   `init` seeds the running product and may be:
     -- a stride scalar (e.g. `int`; the default `1`), or
-    -- a tuple of stride scalars weakly congruent with `a`; 
+    -- a tuple of stride scalars weakly congruent with `a`;
        each mode is prefix-producted independently.
 
   Pre-conditions:
@@ -134,7 +134,7 @@ def coprofile(obj, *, mode=()) -> Profile:
     return obj._coprofile()
   if is_int(obj):                    # A tiler `obj:1`
     return 0
-  if is_tuple(obj):                  # A by-mode tiler
+  if isinstance(obj, tuple):         # A by-mode tiler
     return tuple(0 if b is None else coprofile(b) for b in obj)
   raise TypeError(f"coprofile not supported for type {type(obj)}")
 

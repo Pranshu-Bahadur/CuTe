@@ -34,7 +34,7 @@ def coalesce_z(A, profile=1, *, mode=()):
     return coalesce_z(A, replace(repeat_like(None, shape(A)), profile, mode=mode))
   if hasattr(A, '_coalesce_z'):
     return A._coalesce_z(profile)
-  if is_int(A) or is_tuple(A):
+  if is_int(A) or isinstance(A, tuple):
     return coalesce_z(tiler_to_layout(A), profile)
   raise TypeError(f"coalesce_z not supported for type {type(A)}")
 
@@ -74,7 +74,7 @@ def coalesce(A, profile=1, *, mode=()):
     return coalesce(A, replace(repeat_like(None, shape(A)), profile, mode=mode))
   if hasattr(A, '_coalesce'):
     return A._coalesce(profile)
-  if is_int(A) or is_tuple(A):
+  if is_int(A) or isinstance(A, tuple):
     return coalesce(tiler_to_layout(A), profile)
   raise TypeError(f"coalesce not supported for type {type(A)}")
 
@@ -122,7 +122,7 @@ def composition(A, B: Tiler, *, mode=()):
     return composition(A, replace(repeat_like(None, shape(A)), B, mode=mode))
   if hasattr(A, '_composition'):
     return A._composition(B)
-  if is_int(A) or is_tuple(A):
+  if is_int(A) or isinstance(A, tuple):
     return composition(tiler_to_layout(A), B)
   raise TypeError(f"composition not supported for type {type(A)}")
 
@@ -161,7 +161,7 @@ def right_inverse(A):
     return A._right_inverse()
   if A is None:
     return None
-  if is_int(A) or is_tuple(A):
+  if is_int(A) or isinstance(A, tuple):
     return right_inverse(tiler_to_layout(A))
   raise TypeError(f"right_inverse not supported for type {type(A)}")
 
@@ -202,7 +202,7 @@ def left_inverse(A):
     return A._left_inverse()
   if A is None:
     return None
-  if is_int(A) or is_tuple(A):
+  if is_int(A) or isinstance(A, tuple):
     return left_inverse(tiler_to_layout(A))
   raise TypeError(f"left_inverse not supported for type {type(A)}")
 
@@ -247,7 +247,7 @@ def complement(A, extend: Shape = None):
     return A._complement(extend)
   if A is None:
     return None
-  if is_int(A) or is_tuple(A):
+  if is_int(A) or isinstance(A, tuple):
     return complement(tiler_to_layout(A), extend)
   raise TypeError(f"complement not supported for type {type(A)}")
 
@@ -286,14 +286,14 @@ def logical_product(A, B: Tiler, *, mode=()):
     return logical_product(A, replace(repeat_like(None, shape(A)), B, mode=mode))
   if hasattr(A, '_logical_product'):
     return A._logical_product(B)
-  if is_int(A) or is_tuple(A):
+  if is_int(A) or isinstance(A, tuple):
     A = tiler_to_layout(A)
   if not is_layout(A):
     raise TypeError(f"logical_product not supported for type {type(A)}")
   # A is a Layout: a tuple B applies by-mode over A's modes
   if B is None:
     return A
-  if is_tuple(B):
+  if isinstance(B, tuple):
     if rank(A) < len(B): raise ValueError(f"Rank mismatch: logical_product({A}, {B})")
     return make_layout(logical_product(a,b) for a,b in zip_longest(A,B))
   if is_int(B):
@@ -349,14 +349,14 @@ def logical_divide(A, B: Tiler, *, mode=()):
     return logical_divide(A, replace(repeat_like(None, shape(A)), B, mode=mode))
   if hasattr(A, '_logical_divide'):
     return A._logical_divide(B)
-  if is_int(A) or is_tuple(A):
+  if is_int(A) or isinstance(A, tuple):
     A = tiler_to_layout(A)
   if not is_layout(A):
     raise TypeError(f"logical_divide not supported for type {type(A)}")
   # A is a Layout: a tuple B applies by-mode over A's modes
   if B is None:
     return A
-  if is_tuple(B):
+  if isinstance(B, tuple):
     if rank(A) < len(B): raise ValueError(f"Rank mismatch: logical_divide({A}, {B})")
     return make_layout(logical_divide(a,b) for a,b in zip_longest(A,B))
   if is_int(B):
@@ -463,7 +463,7 @@ def nullspace(A) -> Layout:
     return A._nullspace()
   if A is None:
     return None
-  if is_int(A) or is_tuple(A):
+  if is_int(A) or isinstance(A, tuple):
     return Layout._set(1, 0)
   raise TypeError(f"nullspace not supported for type {type(A)}")
 

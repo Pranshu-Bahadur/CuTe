@@ -27,7 +27,7 @@ profile. This chapter walks through both halves carefully and introduces the
 >
 > *(Whitepaper, §2.2.)*
 
-In PyCuTe, a shape is just a Python integer or a Python `tuple`/`list` of
+In PyCuTe, a shape is just a Python integer or a Python `tuple` of
 shapes. There is no `Shape` *class* — the carrier is still `int` and `tuple` —
 but PyCuTe exports a documentation-grade `Shape` type *alias* (an
 `HTuple(Integer)`, defined in [`typedefs.py`](../pycute/typedefs.py)) for use in

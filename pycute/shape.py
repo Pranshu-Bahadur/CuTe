@@ -77,7 +77,7 @@ def rank(obj, *, mode=()) -> int:
     rank[1](Layout((3, (2, 4))))  == 2
   """
   s = shape(obj, mode=mode)
-  return len(s) if is_tuple(s) else 1
+  return len(s) if isinstance(s, tuple) else 1
 
 
 @ModeOpDecorator
@@ -93,7 +93,7 @@ def depth(obj, *, mode=()) -> int:
     depth[1](Layout((3, (2, 4))))    == 1
   """
   s = shape(obj, mode=mode)
-  return 1 + reduce(max, map(depth, s), 0) if is_tuple(s) else 0
+  return 1 + reduce(max, map(depth, s), 0) if isinstance(s, tuple) else 0
 
 
 def compatible(a: Shape, b: Shape) -> bool:
@@ -122,10 +122,10 @@ def compatible(a: Shape, b: Shape) -> bool:
     compatible(24, (24,))                     == True     # int ≼ (int,)
     compatible((24,), 24)                     == False    # but not the reverse
   """
-  if not (is_int(a) or is_tuple(a)): a = shape(a)
-  if not (is_int(b) or is_tuple(b)): b = shape(b)
+  if not (is_int(a) or isinstance(a, tuple)): a = shape(a)
+  if not (is_int(b) or isinstance(b, tuple)): b = shape(b)
 
-  if is_tuple(a) and is_tuple(b):
+  if isinstance(a, tuple) and isinstance(b, tuple):
     return len(a) == len(b) and reduce(operator.and_, [compatible(i,j) for i,j in zip(a,b)], True)
   if is_int(a):
     return a == size(b)
@@ -161,10 +161,10 @@ def common_refinement(a: Shape, b: Shape) -> Shape:
     common_refinement((6, 5), (2, 15))          -> ValueError    # 6 != 2 at mode 0
     common_refinement((2, (3, 5)), ((3, 2), 5)) -> ValueError    # same size, but incompatible
   """
-  if not (is_int(a) or is_tuple(a)): a = shape(a)
-  if not (is_int(b) or is_tuple(b)): b = shape(b)
+  if not (is_int(a) or isinstance(a, tuple)): a = shape(a)
+  if not (is_int(b) or isinstance(b, tuple)): b = shape(b)
 
-  if is_tuple(a) and is_tuple(b):
+  if isinstance(a, tuple) and isinstance(b, tuple):
     if len(a) != len(b):
       raise ValueError(f"common_refinement: rank mismatch {a} vs {b}")
     return tuple(common_refinement(ai, bi) for ai, bi in zip(a, b))
@@ -172,11 +172,11 @@ def common_refinement(a: Shape, b: Shape) -> Shape:
     if a != b:
       raise ValueError(f"common_refinement: incompatible leaves {a} vs {b}")
     return a
-  if is_int(a) and is_tuple(b):
+  if is_int(a) and isinstance(b, tuple):
     if a != size(b):
       raise ValueError(f"common_refinement: size mismatch {a} vs {b} (sizes {a} vs {size(b)})")
     return b
-  if is_tuple(a) and is_int(b):
+  if isinstance(a, tuple) and is_int(b):
     if size(a) != b:
       raise ValueError(f"common_refinement: size mismatch {a} vs {b} (sizes {size(a)} vs {b})")
     return a
@@ -213,10 +213,10 @@ def common_coarsening(a: Shape, b: Shape) -> Shape:
     common_coarsening(3, 4)                     -> ValueError   # size mismatch
     common_coarsening(7, (2, 3))                -> ValueError   # size mismatch
   """
-  if not (is_int(a) or is_tuple(a)): a = shape(a)
-  if not (is_int(b) or is_tuple(b)): b = shape(b)
+  if not (is_int(a) or isinstance(a, tuple)): a = shape(a)
+  if not (is_int(b) or isinstance(b, tuple)): b = shape(b)
 
-  if is_tuple(a) and is_tuple(b) and len(a) == len(b):
+  if isinstance(a, tuple) and isinstance(b, tuple) and len(a) == len(b):
     try:
       return tuple(common_coarsening(ai, bi) for ai, bi in zip(a, b))
     except ValueError:
@@ -263,8 +263,8 @@ def idx2crd(idx: Coord, shape: Shape) -> Coord:
     return idx._idx2crd(shape)
   if is_int(shape) and is_int(idx):      # Identity
     return idx
-  if is_tuple(shape):
-    if is_tuple(idx):                    # idx: tuple, shape: tuple
+  if isinstance(shape, tuple):
+    if isinstance(idx, tuple):           # idx: tuple, shape: tuple
       if len(idx) != len(shape): raise ValueError(f"Incompatible rank: idx2crd({idx}, {shape})")
       return tuple(idx2crd(i,s) for i,s in zip(idx,shape))
     if is_int(idx):                      # idx: int, shape: tuple
@@ -318,7 +318,7 @@ def coordinates(shape: Shape):
   if is_int(shape):
     yield from range(shape)
     return
-  if is_tuple(shape):
+  if isinstance(shape, tuple):
     if len(shape) == 0:
       yield ()
       return

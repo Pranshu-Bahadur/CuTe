@@ -15,9 +15,9 @@ from pycute import *
 class TestHTuple:
 
   def test_is_tuple(self):
-    """`is_tuple(x)` is True for both Python tuples and lists."""
+    """`is_tuple(x)` is True for Python tuples"""
     assert is_tuple((1, 2, 3))
-    assert is_tuple([1, 2, 3])
+    assert not is_tuple([1, 2, 3])
     assert is_tuple(())
     assert not is_tuple(7)
     assert not is_tuple(None)
@@ -40,7 +40,7 @@ class TestHTuple:
                 make_tensor(Layout(((2, 3), 4)))]:
       assert profile(obj) == shape(obj)
 
-    # Every HTuple is already its own profile, list containers included
+    # Every HTuple is already its own profile
     for obj in [42, (2, 3), [2, [3, 4]], ("m", None)]:
       assert profile(obj) is obj
 
@@ -334,6 +334,7 @@ class TestModeOpDecorator:
     assert shape[0, 1](A) == shape(A, mode=(0, 1)) == 3
     assert shape[0][1](A) == shape[0](A, mode=1) == 3
     assert shape[0, 1](A) == shape(A, mode=[0, 1])     # a list path is a path too
+    assert shape[0, 1](A) == shape[[0, 1]](A)          # ... as a subscript as well
 
   def test_a_negative_mode_counts_from_the_end(self):
     """At every depth, `-1` is the last mode, as for a tuple."""

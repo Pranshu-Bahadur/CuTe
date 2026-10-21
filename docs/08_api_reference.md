@@ -39,7 +39,7 @@ Tests: [`test_compatibility.py`](../test/test_compatibility.py), [`test_htuple.p
 
 Functions for manipulating Hierarchical Tuples
 
-An *HTuple* is the container at the base of CuTe: a leaf, or a tuple/list of
+An *HTuple* is the container at the base of CuTe: a leaf, or a tuple of
 HTuples. `Shape`, `Stride`, `Coord` and `Tiler` are all HTuples that differ only
 in what they admit at a leaf, so the combinators here serve all of them.
 
@@ -56,7 +56,7 @@ Test whether `x` is an HTuple internal node rather than a leaf.
 
 ```python
 is_tuple((1, 2))          == True
-is_tuple([1, 2])          == True
+is_tuple([1, 2])          == False
 is_tuple(7)               == False
 is_tuple(Layout((2, 3)))  == False
 ```
@@ -696,7 +696,7 @@ True iff `value` is an instance of a `StrideScalar` type.
 ### `HTuple`
 
 ```python
-HTuple: TypeAlias = Union[Any, tuple['HTuple', ...], list['HTuple']]
+HTuple: TypeAlias = Union[Any, tuple['HTuple', ...]]
 ```
 
 An HTuple with unconstrained leaves; used for generic, profile-shaped args.
@@ -712,7 +712,7 @@ A congruence *profile*: an HTuple whose leaf values are irrelevant -- only its t
 ### `IntTuple`
 
 ```python
-IntTuple: TypeAlias = Union[Integer, tuple['IntTuple', ...], list['IntTuple']]
+IntTuple: TypeAlias = Union[Integer, tuple['IntTuple', ...]]
 ```
 
 An HTuple(Integer): the shared carrier of shapes and coordinates.
@@ -728,7 +728,7 @@ A shape: an HTuple of (positive) integers describing per-mode extents (Z+).
 ### `Coord`
 
 ```python
-Coord: TypeAlias = Union[Integer, None, tuple['Coord', ...], list['Coord']]
+Coord: TypeAlias = Union[Integer, None, tuple['Coord', ...]]
 ```
 
 A coordinate into a shape: an HTuple of integers -- natural / integral / flat / admissible -- optionally carrying `None` slice-markers at any level.
@@ -736,7 +736,7 @@ A coordinate into a shape: an HTuple of integers -- natural / integral / flat / 
 ### `Stride`
 
 ```python
-Stride: TypeAlias = Union[StrideScalar, tuple['Stride', ...], list['Stride']]
+Stride: TypeAlias = Union[StrideScalar, tuple['Stride', ...]]
 ```
 
 An HTuple(StrideScalar): the stride half of a Layout, congruent with its Shape.
@@ -798,7 +798,7 @@ Exclusive prefix product of the leaves of `a`, congruent with `a`.
 
 `init` seeds the running product and may be:
   -- a stride scalar (e.g. `int`; the default `1`), or
-  -- a tuple of stride scalars weakly congruent with `a`; 
+  -- a tuple of stride scalars weakly congruent with `a`;
      each mode is prefix-producted independently.
 
 *Pre-conditions:*
@@ -1416,7 +1416,7 @@ unit(E(0) + E(1))              -> TypeError
 
 ### `as_tuple(atuple)`
 
-Materialize an `ArithTuple`, or a tuple/list of them, as a plain nested tuple.
+Materialize an `ArithTuple`, or a tuple of them, as a plain nested tuple.
 
 *Examples:*
 
@@ -1638,7 +1638,7 @@ make_ordered_layout((2, 3, 4, 2), (0, 2, 3, 0))  == Layout((2, 3, 4, 2), (1, 4, 
 ### `Tiler`
 
 ```python
-Tiler: TypeAlias = Union[Integer, 'Layout', tuple['Tiler', ...], list['Tiler']]
+Tiler: TypeAlias = Union[Integer, 'Layout', tuple['Tiler', ...]]
 ```
 
 An HTuple(Integer | Layout): the by-mode tiler argument to the algebra.

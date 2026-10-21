@@ -186,7 +186,7 @@ class TestImplicitZeroEquality:
     assert 5 != ArithTuple((5,))
 
   def test_eq_returns_notimplemented_for_foreign_types(self):
-    # Comparisons against types outside {int, ArithTuple, tuple/list}
+    # Comparisons against types outside {int, ArithTuple, tuple}
     # return NotImplemented from __eq__ and fall through to Python's
     # default of False.
     x = ArithTuple(1, 2)
@@ -194,6 +194,16 @@ class TestImplicitZeroEquality:
     assert not x == "foo"
     assert not x == {1: 2}
     assert not x == frozenset([1, 2])
+    assert not x == [1, 2]              # a list is a leaf, not a tuple
+
+  def test_a_list_is_not_lifted(self):
+    """Only a tuple is lifted to an ArithTuple; a list is a foreign leaf."""
+    with pytest.raises(TypeError):
+      ArithTuple([1, 2])
+    with pytest.raises(TypeError):
+      ArithTuple((1, [2, 3]))
+    with pytest.raises(TypeError):
+      ArithTuple(1, 2) + [1, 1]
 
   def test_idx2crd_is_consistent_across_constructions(self):
     assert idx2crd(E(0),             (8, 8)) == (1, 0)

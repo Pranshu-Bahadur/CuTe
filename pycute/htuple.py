@@ -4,7 +4,7 @@
 """
 Functions for manipulating Hierarchical Tuples
 
-An *HTuple* is the container at the base of CuTe: a leaf, or a tuple/list of
+An *HTuple* is the container at the base of CuTe: a leaf, or a tuple of
 HTuples. `Shape`, `Stride`, `Coord` and `Tiler` are all HTuples that differ only
 in what they admit at a leaf, so the combinators here serve all of them.
 
@@ -30,11 +30,11 @@ def is_tuple(x) -> bool:
 
   Examples:
     is_tuple((1, 2))          == True
-    is_tuple([1, 2])          == True
+    is_tuple([1, 2])          == False
     is_tuple(7)               == False
     is_tuple(Layout((2, 3)))  == False
   """
-  return isinstance(x, (tuple, list))
+  return isinstance(x, tuple)
 
 
 def profile(obj) -> Profile:
@@ -77,9 +77,9 @@ def congruent(a: Profile, b: Profile) -> bool:
     congruent((4, 8), (E(0), E(1)))           == True     # a coordinate stride
     congruent((4, 8), (F2(1), F2(8)))         == True     # an F2 stride
   """
-  if is_tuple(a):
-    return is_tuple(b) and len(a) == len(b) and all(map(congruent, a, b))
-  return not is_tuple(b)
+  if isinstance(a, tuple):
+    return isinstance(b, tuple) and len(a) == len(b) and all(map(congruent, a, b))
+  return not isinstance(b, tuple)
 
 
 def weakly_congruent(a: Profile, b: Profile) -> bool:
@@ -104,8 +104,8 @@ def weakly_congruent(a: Profile, b: Profile) -> bool:
     weakly_congruent(E(0), 8)                 == True     # a stride scalar leaf
     weakly_congruent(E(0, 0), (8, 8))         == True     # ... coarsens a shape too
   """
-  if is_tuple(a):
-    return is_tuple(b) and len(a) == len(b) and all(map(weakly_congruent, a, b))
+  if isinstance(a, tuple):
+    return isinstance(b, tuple) and len(a) == len(b) and all(map(weakly_congruent, a, b))
   return True
 
 
@@ -118,7 +118,7 @@ def wrap(x: HTuple) -> HTuple:
     wrap((7,))  == (7,)
     wrap(())    == ()
   """
-  return x if is_tuple(x) else (x,)
+  return x if isinstance(x, tuple) else (x,)
 
 
 def unwrap(x: HTuple) -> HTuple:
@@ -134,7 +134,7 @@ def unwrap(x: HTuple) -> HTuple:
     unwrap((1, 2))        == (1, 2)
     unwrap(wrap((3,)))    == 3            # not (3,): wrap had nothing to add
   """
-  while is_tuple(x) and len(x) == 1: x = x[0]
+  while isinstance(x, tuple) and len(x) == 1: x = x[0]
   return x
 
 
@@ -171,11 +171,14 @@ def ModeOpDecorator(func):
 
     def __call__(self, *args, mode=(), **kwargs):
       """Apply the function, prepending the subscripted modes to its `mode`."""
-      return self.func(*args, mode=self.mode + tuple(wrap(mode)), **kwargs)
+      # A list path is a path too, though a list is not an HTuple
+      path = tuple(mode) if isinstance(mode, list) else wrap(mode)
+      return self.func(*args, mode=self.mode + path, **kwargs)
 
     def __getitem__(self, mode):
       """Return a new instance with new modes appended to existing modes."""
-      return ModeOp(self.func, self.mode + tuple(wrap(mode)))
+      path = tuple(mode) if isinstance(mode, list) else wrap(mode)
+      return ModeOp(self.func, self.mode + path)
 
   return ModeOp(func)
 
@@ -307,7 +310,7 @@ def transform_apply_leaf(make, fn, htuple: HTuple, *tuples: HTuple) -> HTuple:
     transform_apply_leaf(sum, lambda x: x, (1, (2, 3)))        == 6
     transform_apply_leaf(make_layout, Layout, (2, 3), (1, 4))  == Layout((2, 3), (1, 4))
   """
-  if is_tuple(htuple):
+  if isinstance(htuple, tuple):
     return make(transform_apply_leaf(make, fn, *items) for items in zip_longest(htuple, *tuples))
   return fn(htuple, *tuples)
 
@@ -337,9 +340,9 @@ def leaves(htuple: HTuple) -> Iterator:
     tuple(leaves(42))           == (42,)
     tuple(leaves(()))           == ()
   """
-  if is_tuple(htuple):
+  if isinstance(htuple, tuple):
     for x in htuple:
-      if is_tuple(x): yield from leaves(x)
+      if isinstance(x, tuple): yield from leaves(x)
       else:           yield x
   else:
     yield htuple
@@ -361,9 +364,9 @@ def zip_leaves(htuple: HTuple, *tuples: HTuple) -> Iterator[tuple]:
     list(zip_leaves((1, 2), (3, 4), (5, 6)))    == [(1, 3, 5), (2, 4, 6)]
     list(zip_leaves(1, (2, 3)))                 == [(1, (2, 3))]
   """
-  if is_tuple(htuple):
+  if isinstance(htuple, tuple):
     for x in zip_longest(htuple, *tuples):
-      if is_tuple(x[0]): yield from zip_leaves(*x)
+      if isinstance(x[0], tuple): yield from zip_leaves(*x)
       else:              yield x
   else:
     yield (htuple, *tuples)
@@ -418,8 +421,8 @@ def unflatten(values: Iterator, profile: Profile, make=tuple) -> HTuple:
     unflatten(iter([1, 2, 3]), 0)            == 1
     unflatten(iter([2, 3]), (0, 0), list)    == [2, 3]
   """
-  if is_tuple(profile):
-    return make(unflatten(values,p,make) if is_tuple(p) else next(values) for p in profile)
+  if isinstance(profile, tuple):
+    return make(unflatten(values,p,make) if isinstance(p, tuple) else next(values) for p in profile)
   return next(values)
 
 
